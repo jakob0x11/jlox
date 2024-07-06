@@ -23,7 +23,19 @@ class Parser {
     }
 
     private Expr expression() {
-        return equality();
+        return comma();
+    }
+
+    // Comma operator has the lowest precedence
+    private Expr comma() {
+        Expr expr = equality();
+
+        if (match(COMMA)) {
+            // This discards the left operand as a side effect
+            expr = expression();
+        }
+
+        return expr;
     }
 
     private Expr equality() {
