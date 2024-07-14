@@ -28,7 +28,7 @@ class Parser {
 
     // Comma operator has the lowest precedence
     private Expr comma() {
-        Expr expr = equality();
+        Expr expr = conditional();
 
         if (match(COMMA)) {
             // This discards the left operand as a side effect
@@ -38,6 +38,20 @@ class Parser {
         return expr;
     }
 
+    // conditional -> equality ( "?"  conditional  ":"  ( conditional | equality ) )* ;
+    private Expr conditional() {
+        Expr expr = equality();
+
+        if (match(QUESTION_MARK)) {
+            expr = new Expr.Binary(expr, previous(), conditional());
+            consume(COLON, "Expect ':' after '?'.");
+            return new Expr.Binary(expr, previous(), conditional());
+        }
+
+        return expr;
+    }
+
+    // equality -> comparison ( ( "!=" | "==" ) comparison )* ;
     private Expr equality() {
         Expr expr = comparison();
 
