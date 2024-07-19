@@ -1,11 +1,25 @@
 package com.craftinginterpreters.lox;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static com.craftinginterpreters.lox.TokenType.*;
 
 class Parser {
-    private static class ParseError extends RuntimeException {}
+    private static class UnhandledParseError extends RuntimeException {
+    }
+
+    private static class HandledParseError {
+        final Token errorPoint;
+        final String message;
+
+        HandledParseError(Token errorPoint, String message) {
+            this.errorPoint = errorPoint;
+            this.message = message;
+        }
+    }
+
+    private List<HandledParseError> handledParseErrors = new ArrayList<>();
 
     private final List<Token> tokens;
     private int current = 0;
@@ -16,8 +30,12 @@ class Parser {
 
     Expr parse() {
         try {
-            return expression();
-        } catch (ParseError error) {
+            Expr expr = expression();
+            for (HandledParseError handledParseError : this.handledParseErrors) {
+                Lox.error(handledParseError.errorPoint, handledParseError.message);
+            }
+            return expr;
+        } catch (UnhandledParseError error) {
             return null;
         }
     }
@@ -38,7 +56,7 @@ class Parser {
         return expr;
     }
 
-    // conditional -> equality ( "?"  conditional  ":"  ( conditional | equality ) )* ;
+    // conditional -> equality ( "?" conditional ":" ( conditional | equality ) )* ;
     private Expr conditional() {
         Expr expr = equality();
 
@@ -80,6 +98,10 @@ class Parser {
         Expr expr = factor();
 
         while (match(MINUS, PLUS)) {
+            if (checkForMissingExpression(expr, "Binary operators must have a left and right operand.")) {
+                advance();
+                return expression();
+            }
             Token operator = previous();
             Expr right = factor();
             expr = new Expr.Binary(expr, operator, right);
@@ -111,9 +133,12 @@ class Parser {
     }
 
     private Expr primary() {
-        if (match(FALSE)) return new Expr.Literal(false);
-        if (match(TRUE)) return new Expr.Literal(true);
-        if (match(NIL)) return new Expr.Literal(null);
+        if (match(FALSE))
+            return new Expr.Literal(false);
+        if (match(TRUE))
+            return new Expr.Literal(true);
+        if (match(NIL))
+            return new Expr.Literal(null);
 
         if (match(NUMBER, STRING)) {
             return new Expr.Literal(previous().literal);
@@ -125,7 +150,16 @@ class Parser {
             return new Expr.Grouping(expr);
         }
 
-        throw error(peek(), "Expect expression.");
+        return new Expr.Nothing("There's nothing here.");
+    }
+
+    private boolean checkForMissingExpression(Expr expr, String errorMessage) {
+        if (expr instanceof Expr.Nothing) {
+            HandledParseError error = new HandledParseError(previous(), errorMessage);
+            this.handledParseErrors.add(error);
+            return true;
+        }
+        return false;
     }
 
     private boolean match(TokenType... types) {
@@ -140,18 +174,21 @@ class Parser {
     }
 
     private Token consume(TokenType type, String message) {
-        if (check(type)) return advance();
+        if (check(type))
+            return advance();
 
         throw error(peek(), message);
     }
 
     private boolean check(TokenType type) {
-        if (isAtEnd()) return false;
+        if (isAtEnd())
+            return false;
         return peek().type == type;
     }
 
     private Token advance() {
-        if (!isAtEnd()) current++;
+        if (!isAtEnd())
+            current++;
         return previous();
     }
 
@@ -167,16 +204,17 @@ class Parser {
         return tokens.get(current - 1);
     }
 
-    private ParseError error(Token token, String message) {
+    private UnhandledParseError error(Token token, String message) {
         Lox.error(token, message);
-        return new ParseError();
+        return new UnhandledParseError();
     }
 
     private void synchronize() {
         advance();
 
         while (!isAtEnd()) {
-            if (previous().type == SEMICOLON) return;
+            if (previous().type == SEMICOLON)
+                return;
 
             switch (peek().type) {
                 case CLASS:

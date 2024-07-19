@@ -8,6 +8,7 @@ abstract class Expr {
         R visitGroupingExpr(Grouping expr);
         R visitLiteralExpr(Literal expr);
         R visitUnaryExpr(Unary expr);
+        R visitNothingExpr(Nothing expr);
     }
     static class Binary extends Expr {
         Binary(Expr left, Token operator, Expr right) {
@@ -62,6 +63,18 @@ abstract class Expr {
 
         final Token operator;
         final Expr right;
+    }
+    static class Nothing extends Expr {
+        Nothing(String nothing) {
+            this.nothing = nothing;
+        }
+
+        @Override
+        <R> R accept(Visitor<R> visitor) {
+            return visitor.visitNothingExpr(this);
+        }
+
+        final String nothing;
     }
 
     abstract <R> R accept(Visitor<R> visitor);
