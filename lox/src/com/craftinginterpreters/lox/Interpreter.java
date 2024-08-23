@@ -75,10 +75,19 @@ public class Interpreter implements Expr.Visitor<Object> {
                 if (left instanceof String && right instanceof String) {
                     return (String)left + (String)right;
                 }
+                if (left instanceof String) {
+                    return (String)left + convertToString(right);
+                }
+                if (right instanceof String) {
+                    return convertToString(left) + (String)right;
+                }
                 
                 throw new RuntimeError(expr.operator, "Operands must be two numbers or two strings.");
             case SLASH:
                 checkNumberOperands(expr.operator, left, right);
+                if ((double)right == 0.0) {
+                    throw new RuntimeError(expr.operator, "Dividing operand cannot be zero.");
+                }
                 return (double)left / (double)right;
             case STAR:
                 checkNumberOperands(expr.operator, left, right);
@@ -89,6 +98,19 @@ public class Interpreter implements Expr.Visitor<Object> {
 
         // Unreachable
         return null;
+    }
+
+    private String convertToString(Object object) {
+        String str = object.toString();
+        if (object instanceof Double) {
+            if ((double)object % 1.0 != 0) {
+                return str;
+            } else {
+                // Concat as a whole integer (no decimal needed)
+                return str.substring(0, str.lastIndexOf('.'));
+            }
+        }
+        return str;
     }
 
     private boolean isTruthy(Object object) {
