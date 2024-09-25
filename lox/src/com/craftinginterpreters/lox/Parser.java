@@ -11,11 +11,15 @@ class Parser {
     private final List<Token> tokens;
     private int current = 0;
 
+    private boolean isREPL = false;
+
     Parser(List<Token> tokens) {
         this.tokens = tokens;
     }
 
-    List<Stmt> parse() {
+    List<Stmt> parse(boolean isREPL) {
+        this.isREPL = isREPL;
+
         List<Stmt> statements = new ArrayList<>();
         while (!isAtEnd()) {
             statements.add(declaration());
@@ -51,7 +55,13 @@ class Parser {
 
     private Stmt expressionStatement() {
         Expr expression = expression();
-        consume(SEMICOLON, "Expect ';' after expression.");
+        if (!isREPL) {
+            consume(SEMICOLON, "Expect ';' after expression.");
+        } else if (!match(SEMICOLON)) {
+            // We're in the REPL and there's no semicolon, 
+            // so let's print the result for the user
+            return new Stmt.Print(expression);
+        }
         return new Stmt.Expression(expression);
     }
 
