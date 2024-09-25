@@ -43,7 +43,12 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
 
     @Override
     public Object visitVariableExpr(Expr.Variable expr) {
-        return environment.get(expr.name);
+        Object var = environment.get(expr.name);
+        if (var == null) {
+            throw new RuntimeError(expr.name, 
+            "Cannot access an uninitialized variable.");
+        }
+        return var;
     }
 
     private void checkNumberOperand(Token operator, Object operand) {
