@@ -187,6 +187,10 @@ class Parser {
     private Stmt declaration() {
         try {
             if (match(VAR)) return varDeclaration();
+            if (match(BREAK)) {
+                consume(SEMICOLON, "Expect semicolon after break.");
+                return new Stmt.Break(null);
+            }
 
             return statement();
         } catch (ParseError error) {

@@ -5,6 +5,8 @@ import java.util.List;
 public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     private Environment environment = new Environment();
 
+    private boolean breakHit = false;
+
     void interpret(List<Stmt> statements) {
         try {
             for (Stmt statement : statements) {
@@ -154,11 +156,19 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
             this.environment = environment;
 
             for (Stmt statement : statements) {
+                if (breakHit) break;
+
                 execute(statement);
             }
         } finally {
             this.environment = previous;
         }
+    }
+
+    @Override
+    public Void visitBreakStmt(Stmt.Break stmt) {
+        breakHit = true;
+        return null;
     }
 
     @Override
@@ -186,6 +196,11 @@ public class Interpreter implements Expr.Visitor<Object>, Stmt.Visitor<Void> {
     @Override
     public Void visitWhileStmt(Stmt.While stmt) {
         while (isTruthy(evaluate(stmt.condition))) {
+            if (breakHit) {
+                breakHit = false;
+                break;
+            }
+
             execute(stmt.body);
         }
         return null;
